@@ -1,0 +1,65 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SkillBridge — Your Skill Report</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@600;800&display=swap" rel="stylesheet">
+<link href="assets/css/style.css" rel="stylesheet"></head><body class="sb-hero"><nav class="navbar navbar-expand-lg navbar-dark sticky-top"><div class="container">
+<a class="navbar-brand sb-brand" href="index.html">Skill<span>Bridge</span></a>
+<button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#nav"><span class="navbar-toggler-icon"></span></button>
+<div class="collapse navbar-collapse" id="nav"><ul class="navbar-nav ms-auto">
+<li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
+<li class="nav-item"><a class="nav-link" href="dashboard.html">My Analysis</a></li>
+<li class="nav-item"><a class="nav-link" href="admin.html">Admin</a></li>
+</ul></div></div></nav>
+<section class="py-5"><div class="container">
+<div class="row g-4 mb-4" id="dashTop"></div>
+<div class="row g-4">
+<div class="col-lg-6"><div class="card-sb p-4 h-100"><h5 class="mb-3">Skill Coverage Radar</h5><canvas id="radar" height="280"></canvas></div></div>
+<div class="col-lg-6"><div class="card-sb p-4 h-100"><h5 class="mb-3">Skill-by-Skill Match</h5><canvas id="bars" height="280"></canvas></div></div>
+</div>
+<div class="card-sb p-4 mt-4"><h5 class="mb-3">📚 Recommended Free Learning Resources</h5>
+<div id="resTable"></div>
+<div class="text-center mt-3"><a href="index.html" class="btn btn-sb">← Run a new analysis</a></div>
+</div>
+</div></section>
+<footer class="py-4 text-center small">SkillBridge · BSc Computer Science Project</footer>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="assets/js/data.js"></script><script src="assets/js/main.js"></script>
+<script>
+let r = sbGet("lastResult") || sbSeedAnalysis();
+const allUsers = sbGet("users");
+const det = allUsers.find(u=>u.email==="aarav@student.dev");
+if(!sbGet("lastResult") && det){ r = sbAnalyze(det.skills, (sbGet("jobs").find(j=>j.title===det.target)||{}).id || 3); }
+// banner
+const color = r.match>=80?"var(--sb-green)":r.match>=50?"var(--sb-amber)":"var(--sb-red)";
+document.getElementById("dashTop").innerHTML = `
+<div class="col-md-4"><div class="card-sb p-4 text-center h-100"><small style="color:var(--sb-muted)">TARGET JOB</small>
+<h4>${r.job.title}</h4><span class="badge badge-skill" style="cursor:default">${r.job.level} level</span></div></div>
+<div class="col-md-4"><div class="card-sb p-4 text-center h-100"><small style="color:var(--sb-muted)">SKILL MATCH</small>
+<div class="stat-num" style="color:${color}">${r.match}%</div><div class="progress"><div class="progress-bar" style="width:${r.match}%"></div></div></div></div>
+<div class="col-md-4"><div class="card-sb p-4 text-center h-100"><small style="color:var(--sb-muted)">VERDICT</small>
+<h4 style="color:${color}">${r.band}</h4><div>${r.have.length}/${r.job.skills.length} skills covered</div></div></div>`;
+// skill lists
+const haveBadges = r.have.map(s=>`<span class="badge badge-skill gap-ok me-1 mb-1" style="cursor:default">✓ ${s}</span>`).join("") || "<small style='color:var(--sb-muted)'>None yet</small>";
+const missBadges = r.missing.map(s=>`<span class="badge badge-skill gap-bad me-1 mb-1" style="cursor:default">✗ ${s}</span>`).join("") || "<small style='color:var(--sb-muted)'>Nothing missing — great job!</small>";
+document.getElementById("resTable").innerHTML = `
+<div class="row g-2 mb-4"><div class="col-md-6"><h6 class="text-success">✅ You have</h6>${haveBadges}</div>
+<div class="col-md-6"><h6 class="text-danger">🎯 You're missing</h6>${missBadges}</div></div>`;
+// resources table
+const res = sbResourcesFor(r.missing);
+let rows=""; Object.entries(res).forEach(([s,list])=>{ list.forEach(([name,url,cost])=>{ rows+=`<tr><td><span class="badge badge-skill" style="cursor:default">${s}</span></td><td><a href="${url}" target="_blank" style="color:var(--sb-primary-2)">${name}</a></td><td><span class="badge ${cost==='Free'?'gap-ok':'gap-warn'}">${cost}</span></td></tr>`; }); });
+document.getElementById("resTable").innerHTML += rows ? `<table class="table table-sb"><thead><tr><th>Missing Skill</th><th>Resource</th><th>Cost</th></tr></thead><tbody>${rows}</tbody></table>` : "";
+// charts
+Chart.defaults.color="#9aa0c3";
+const uni=[...new Set([...r.job.skills, ...r.have])];
+new Chart(document.getElementById("radar"),{type:"radar",
+ data:{labels:uni,datasets:[
+  {label:"Required",data:uni.map(s=>r.job.skills.includes(s)?10:0),backgroundColor:"rgba(255,107,129,.25)",borderColor:"#ff6b81"},
+  {label:"You have",data:uni.map(s=>r.have.includes(s)?10:0),backgroundColor:"rgba(0,230,168,.25)",borderColor:"#00e6a8"}]},
+ options:{scales:{r:{min:0,max:10,ticks:{display:false}},},plugins:{legend:{labels:{color:"#e8eaf6"}}}}});
+new Chart(document.getElementById("bars"),{type:"bar",
+ data:{labels:r.job.skills,datasets:[{label:"Match",data:r.job.skills.map(s=>r.have.includes(s)?100:0),
+  backgroundColor:r.job.skills.map(s=>r.have.includes(s)?"#00e6a8":"rgba(255,107,129,.7)")}]},
+ options:{indexAxis:"y",plugins:{legend:{display:false}},scales:{x:{max:100,ticks:{color:"#9aa0c3"}},y:{ticks:{color:"#e8eaf6"}}}}});
+</script></body></html>

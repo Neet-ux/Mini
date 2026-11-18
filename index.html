@@ -1,0 +1,21 @@
+<footer class="py-4 text-center small">SkillBridge · BSc Computer Science Project · Built with Bootstrap 5, Chart.js & Flask</footer>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="assets/js/data.js"></script><script src="assets/js/main.js"></script>
+<script>
+const jobs=sbGet("jobs"); let picked=new Set();
+document.getElementById("jobSel").innerHTML=jobs.map(j=>`<option value="${j.id}">${j.title} (${j.level})</option>`).join("");
+function renderPool(){
+  const job=jobs.find(j=>j.id==document.getElementById("jobSel").value);
+  const all=[...new Set([...job.skills, ...sbGet("resources").map(r=>r.skill), ...picked])];
+  document.getElementById("skillPool").innerHTML=all.map(s=>
+    `<span class="badge-skill badge ${picked.has(s)?'active':''}" onclick="toggleSkill('${s}')">${s}</span>`).join("");
+}
+function toggleSkill(s){ picked.has(s)?picked.delete(s):picked.add(s); renderPool(); }
+document.getElementById("jobSel").addEventListener("change",renderPool); renderPool();
+document.getElementById("extraSkill").addEventListener("keydown",e=>{ if(e.key==="Enter"&&e.target.value.trim()){picked.add(e.target.value.trim());e.target.value="";renderPool();} });
+function sbRun(){
+  const r=sbAnalyze([...picked], document.getElementById("jobSel").value);
+  sbStore("lastResult", r); location.href="dashboard.html";
+}
+</script></body></html>
